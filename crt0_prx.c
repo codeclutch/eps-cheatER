@@ -25,11 +25,11 @@
 extern SceUID sceKernelSearchModuleByName(unsigned char *);
 
 //Defines
-PSP_MODULE_INFO("nitePR", 0x3007, 1, 2); //0x3007
+PSP_MODULE_INFO("cheatER", 0x3007, 1, 2); //0x3007
 PSP_MAIN_THREAD_ATTR(0); //0 for kernel mode too
 
 //Globals
-unsigned char *gameDir="ms0:/seplugins/nitePR/__________.txt";
+unsigned char *gameDir="ms0:/seplugins/cheatER/__________.txt";
 unsigned char gameId[10];
 unsigned char running=0;
 SceUID thid;
@@ -585,7 +585,7 @@ void cheatSave()
     fileBufferFileOffset=0;
     
     //2) Open up the temporary and get ready to regenerate it
-    tempFd=sceIoOpen("ms0:/seplugins/nitePR/temp.txt", PSP_O_WRONLY | PSP_O_CREAT, 0777);
+    tempFd=sceIoOpen("ms0:/seplugins/cheatER/temp.txt", PSP_O_WRONLY | PSP_O_CREAT, 0777);
     if(tempFd<=0) { sceIoClose(fd); return;}
     
     //Add the codes that are already there
@@ -745,7 +745,7 @@ void cheatSave()
     
     //Delete the old file, rename the temporary
     sceIoRemove(gameDir);
-    sceIoRename("ms0:/seplugins/nitePR/temp.txt", gameDir);
+    sceIoRename("ms0:/seplugins/cheatER/temp.txt", gameDir);
   }
   
   //Open the file for appending
@@ -983,9 +983,9 @@ void menuDraw()
   //Draw the menu
   pspDebugScreenSetXY(0, 0);
   pspDebugScreenSetTextColor(0xFFFFFFFF);
-  pspDebugScreenPuts("SANiK's NitePR Rev. J\nThanks TyRaNiD + telazorn + imk\n");
-  pspDebugScreenSetTextColor(0xFF00FFFF);pspDebugScreenPuts("http://sanik.imk.cx/\n");
-  
+  pspDebugScreenPuts("Eps cheatER\nThanks NitePR peeps\n");
+  pspDebugScreenSetTextColor(0xFF00FFFF);
+
   if(cheatStatus)
   {
     pspDebugScreenSetTextColor(0xFF00FF00);
@@ -1012,8 +1012,8 @@ void menuDraw()
   {
     pspDebugScreenSetTextColor(0xFFFFFFFF);pspDebugScreenPuts("[Initiation]");
     pspDebugScreenSetTextColor(0xFF808080);pspDebugScreenPuts("\n--------------------------------------------------------------------");
-    pspDebugScreenSetTextColor(0xFF0000FF);pspDebugScreenPuts("Please tell nitePR when to generate OFF codes by pressing\nthe MUSICAL NOTE button while inside the game at least once\nand NOT when the cheat menu is showing!!!\n\n");
-    pspDebugScreenSetTextColor(0xFF00FF00);pspDebugScreenPuts("HINTs:\n - To take a screenshot, press DOWN + SQUARE\n\n - Use nitePRed.exe (it comes in the same zip as nitePR.prx) to\n   change the button assignments (such as the screenshot key combo)\n\n - Some cheats need the PRX->Cheat Hz option to be set to 15/1000\n   This is for cheats that overwrite a changing value\n\n - One can use CWCheat2NitePR.htm to convert CWCheat codes to\n   nitePR format without any issues. Look in the Doc folder\n   of the nitePR.zip file for it.\n\n");
+    pspDebugScreenSetTextColor(0xFF0000FF);pspDebugScreenPuts("Please tell CheatER when to generate OFF codes by pressing\nthe MUSICAL NOTE button while inside the game at least once\nand NOT when the cheat menu is showing!!!\n\n");
+    pspDebugScreenSetTextColor(0xFF00FF00);pspDebugScreenPuts("HINTs:\n - To take a screenshot, press DOWN + SQUARE\n\n   change the button assignments (such as the screenshot key combo)\n\n - Some cheats need the PRX->Cheat Hz option to be set to 15/1000\n   This is for cheats that overwrite a changing value\n\n");
     pspDebugScreenSetTextColor(0xFFFFFFFF);pspDebugScreenPuts("                           [PRESS START]\n\n");
     return;
   }
@@ -1932,7 +1932,7 @@ void menuDraw()
         lineClear(32);
         switch(cheatSelected)
         {
-          case 0: pspDebugScreenPuts("Pauses the game while nitePR's menu is showing"); break;
+          case 0: pspDebugScreenPuts("Pauses the game while cheatER's menu is showing"); break;
           case 1: pspDebugScreenPuts("Adds an empty cheat to the Cheater for you to edit"); break;
           case 2: pspDebugScreenPuts("Uses the selected 'RAM dump' to regenerate OFF codes"); break;
           case 3: pspDebugScreenPuts("Saves the Game's RAM to MemoryStick"); break;
@@ -1940,7 +1940,7 @@ void menuDraw()
           case 5: pspDebugScreenPuts("If enabled, REAL PSP hardware addresses will be used in Browser"); break;
           case 6: pspDebugScreenPuts("If enabled, REAL PSP hardware addresses will be used in Decoder"); break;
           case 7: pspDebugScreenPuts("If enabled, REAL PSP hardware addresses will be used in Logger"); break;
-          case 8: lineClear(31);pspDebugScreenPuts("nitePR only applies a cheat once - set this to anything other");  lineClear(32); pspDebugScreenPuts("than 0 to make it apply the same cheat every X amount of seconds"); break;
+          case 8: lineClear(31);pspDebugScreenPuts("cheatER only applies a cheat once - set this to anything other");  lineClear(32); pspDebugScreenPuts("than 0 to make it apply the same cheat every X amount of seconds"); break;
           case 9: pspDebugScreenPuts("Save your cheats"); break;
         }
         lineClear(33);
@@ -2335,7 +2335,7 @@ void menuInput()
     
     if(a_address == 0)
     {
-      //Stop nitePR
+      //Stop cheatER
       menuDrawn=0;
       return;
     }
@@ -5324,7 +5324,7 @@ int mainThread()
     hookAddress=*((unsigned int*)hookAddress);
     
     //Open the PSID file
-    fd=sceIoOpen("ms0:/seplugins/nitePR/nitePRimportant.bin", PSP_O_RDONLY, 0777);
+    fd=sceIoOpen("ms0:/seplugins/cheatER/cheatERimportant.bin", PSP_O_RDONLY, 0777);
     if(fd > 0)
     {
       sceIoRead(fd, psid, 16);
@@ -5332,7 +5332,7 @@ int mainThread()
     }
     else
     {
-      fd=sceIoOpen("ms0:/seplugins/nitePR/nitePRimportant.bin", PSP_O_WRONLY | PSP_O_CREAT, 0777);
+      fd=sceIoOpen("ms0:/seplugins/cheatER/cheatERimportant.bin", PSP_O_WRONLY | PSP_O_CREAT, 0777);
       if(fd > 0)
       {
         ((int(*)(char*))hookAddress)(psid);
@@ -5473,7 +5473,7 @@ int mainThread()
         pspDebugScreenSetColorMode(a_pixelFormat);
   			pspDebugScreenSetXY(0, 0);
   			pspDebugScreenSetTextColor(0xFFFFFFFF);
-  			pspDebugScreenPuts("nitePR: Double tap the home button to initate nitePR\nWhen initiated: Vol+&- = cheat menu; Music Button = turn on/off cheats");
+  			pspDebugScreenPuts("cheatER: Double tap the home button to initate cheatER\nWhen initiated: Vol+&- = cheat menu; Music Button = turn on/off cheats");
       }
       
       sceKernelDelayThread(1500);
@@ -5585,7 +5585,7 @@ int _start(SceSize args, void *argp)
   
 	//Create thread
   sceKernelGetThreadmanIdList(SCE_KERNEL_TMID_Thread, thread_buf_start, MAX_THREAD, &thread_count_start);
-	thid=sceKernelCreateThread("nitePRThread", &mainThread, 0x18, 0x1000, 0, NULL);
+	thid=sceKernelCreateThread("cheatERThread", &mainThread, 0x18, 0x1000, 0, NULL);
       
   //Start thread
   if(thid >= 0) sceKernelStartThread(thid, 0, NULL);
