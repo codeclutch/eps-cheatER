@@ -15,7 +15,7 @@ CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti
 ASFLAGS = $(CFLAGS)
 
 LIBDIR =
-LIBS = -lpspchnnlsv -lpsputility -lpspdebug -lpspge_driver -lpspwlan -lpspumd
+LIBS = -lpspchnnlsv -lpsputility -lpspdebug -lpspge_driver -lpspwlan -lpspumd -lpsppower
 LDFLAGS = -nostdlib  -nodefaultlibs -g
 
 PSPSDK=$(shell psp-config --pspsdk-path)
