@@ -1,4 +1,4 @@
-TARGET = epsPR
+TARGET = cheatER
 OBJS = crt0_prx.o exports.o module.o
 
 # Define to build this as a prx (instead of a static elf)
