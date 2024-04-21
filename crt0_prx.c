@@ -167,6 +167,15 @@ unsigned char screenPath[64] = {0};
     pspDebugScreenPuts("                                                                   "); \
     pspDebugScreenSetXY(0, a_line);
 
+int linearSearch(char *arr[], int size, char *target) {
+    for(int i = 0; i < size; i++) {
+        if(strcmp(arr[i], target) == 0) {
+            return i; // return the index of the found element
+        }
+    }
+    return -1; // return -1 if the element is not found
+}
+
 //Arrays
 unsigned int decDelta[10] = {1000000000, 100000000, 10000000, 1000000, 100000, 10000, 1000, 100, 10, 1};
 unsigned char *searchModeName[] = {
@@ -367,14 +376,13 @@ unsigned int blockAdd(int fd, unsigned char *a_data) {
     return 0;
 }
 
-
-void cheatEnable(unsigned int a_cheat) {
+void cheatToggle(unsigned int a_cheat, unsigned char enable) {
     unsigned int counter;
     unsigned char resetDMA = 0;
     cheatDMA = 0;
 
     counter = cheat[a_cheat].block;
-    while (counter < (cheat[a_cheat].block + cheat[a_cheat].len)) {
+    while (counter < (cheat[a_cheat].block + cheat[a_cheat].len)){
         if (block[counter].flags & FLAG_DMA) {
             if (block[counter].hakVal != 0xFFFFFFFF) {
                 cheatDMA = *((unsigned int *) (0x08800000 + (block[counter].hakVal & 0x1FFFFFF))) - 0x08800000;
@@ -390,90 +398,80 @@ void cheatEnable(unsigned int a_cheat) {
                 resetDMA = 0;
             }
         } else {
-            //Backup data?
-            if (((cheatDMA) && (resetDMA)) ||
-                ((cheat[a_cheat].flags & FLAG_FRESH) && (block[counter].flags & FLAG_FREEZE))) {
+            if (enable){
+                if (((cheatDMA) && (resetDMA)) ||
+                    ((cheat[a_cheat].flags & FLAG_FRESH) && (block[counter].flags & FLAG_FREEZE))) {
+                    switch (block[counter].flags & FLAG_DWORD) {
+                        case FLAG_DWORD:
+                            block[counter].stdVal = *((unsigned int *) (cheatDMA + block[counter].address));
+                            break;
+                        case FLAG_WORD:
+                            block[counter].stdVal = *((unsigned short *) (cheatDMA + block[counter].address));
+                            break;
+                        case FLAG_BYTE:
+                            block[counter].stdVal = *((unsigned char *) (cheatDMA + block[counter].address));
+                            break;
+                    }
+                    if (block[counter].flags & FLAG_FREEZE) {
+                        block[counter].hakVal = block[counter].stdVal;
+                    }
+                }
+
+                //Apply cheat!
                 switch (block[counter].flags & FLAG_DWORD) {
                     case FLAG_DWORD:
-                        block[counter].stdVal = *((unsigned int *) (cheatDMA + block[counter].address));
+                        *((unsigned int *) (cheatDMA + block[counter].address)) = block[counter].hakVal;
+                        sceKernelDcacheWritebackInvalidateRange(cheatDMA + block[counter].address, 4);
+                        sceKernelIcacheInvalidateRange(cheatDMA + block[counter].address, 4);
                         break;
                     case FLAG_WORD:
-                        block[counter].stdVal = *((unsigned short *) (cheatDMA + block[counter].address));
+                        *((unsigned short *) (cheatDMA + block[counter].address)) = (unsigned short) block[counter].hakVal;
+                        sceKernelDcacheWritebackInvalidateRange(cheatDMA + block[counter].address, 2);
+                        sceKernelIcacheInvalidateRange(cheatDMA + block[counter].address, 2);
                         break;
                     case FLAG_BYTE:
-                        block[counter].stdVal = *((unsigned char *) (cheatDMA + block[counter].address));
+                        *((unsigned char *) (cheatDMA + block[counter].address)) = (unsigned char) block[counter].hakVal;
+                        sceKernelDcacheWritebackInvalidateRange(cheatDMA + block[counter].address, 1);
+                        sceKernelIcacheInvalidateRange(cheatDMA + block[counter].address, 1);
                         break;
                 }
-                if (block[counter].flags & FLAG_FREEZE) {
-                    block[counter].hakVal = block[counter].stdVal;
+            }
+            else{
+                if (!resetDMA){
+                    switch (block[counter].flags & FLAG_DWORD) {
+                        case FLAG_DWORD:
+                            *((unsigned int *) (cheatDMA + block[counter].address)) = block[counter].stdVal;
+                            sceKernelDcacheWritebackInvalidateRange(cheatDMA + block[counter].address, 4);
+                            sceKernelIcacheInvalidateRange(cheatDMA + block[counter].address, 4);
+                            break;
+                        case FLAG_WORD:
+                            *((unsigned short *) (cheatDMA + block[counter].address)) = (unsigned short) block[counter].stdVal;
+                            sceKernelDcacheWritebackInvalidateRange(cheatDMA + block[counter].address, 2);
+                            sceKernelIcacheInvalidateRange(cheatDMA + block[counter].address, 2);
+                            break;
+                        case FLAG_BYTE:
+                            *((unsigned char *) (cheatDMA + block[counter].address)) = (unsigned char) block[counter].stdVal;
+                            sceKernelDcacheWritebackInvalidateRange(cheatDMA + block[counter].address, 1);
+                            sceKernelIcacheInvalidateRange(cheatDMA + block[counter].address, 1);
+                            break;
+                    }
                 }
             }
-
-            //Apply cheat!
-            switch (block[counter].flags & FLAG_DWORD) {
-                case FLAG_DWORD:
-                    *((unsigned int *) (cheatDMA + block[counter].address)) = block[counter].hakVal;
-                    sceKernelDcacheWritebackInvalidateRange(cheatDMA + block[counter].address, 4);
-                    sceKernelIcacheInvalidateRange(cheatDMA + block[counter].address, 4);
-                    break;
-                case FLAG_WORD:
-                    *((unsigned short *) (cheatDMA + block[counter].address)) = (unsigned short) block[counter].hakVal;
-                    sceKernelDcacheWritebackInvalidateRange(cheatDMA + block[counter].address, 2);
-                    sceKernelIcacheInvalidateRange(cheatDMA + block[counter].address, 2);
-                    break;
-                case FLAG_BYTE:
-                    *((unsigned char *) (cheatDMA + block[counter].address)) = (unsigned char) block[counter].hakVal;
-                    sceKernelDcacheWritebackInvalidateRange(cheatDMA + block[counter].address, 1);
-                    sceKernelIcacheInvalidateRange(cheatDMA + block[counter].address, 1);
-                    break;
-            }
+            counter++;
         }
-        counter++;
     }
+}
+
+
+
+void cheatEnable(unsigned int a_cheat) {
+    cheatToggle(a_cheat, 1);
 }
 
 void cheatDisable(unsigned int a_cheat) {
-    unsigned int counter;
-    unsigned char resetDMA = 0;
-    cheatDMA = 0;
-
-    counter = cheat[a_cheat].block;
-    while (counter < (cheat[a_cheat].block + cheat[a_cheat].len)) {
-        if (block[counter].flags & FLAG_DMA) {
-            if (block[counter].hakVal != 0xFFFFFFFF) {
-                cheatDMA = *((unsigned int *) (0x08800000 + (block[counter].hakVal & 0x1FFFFFF))) - 0x08800000;
-                if (block[counter].stdVal != cheatDMA) {
-                    resetDMA = 1;
-                    block[counter].stdVal = cheatDMA;
-                } else {
-                    resetDMA = 0;
-                }
-            } else {
-                cheatDMA = 0;
-                resetDMA = 0;
-            }
-        } else if (!resetDMA) {
-            switch (block[counter].flags & FLAG_DWORD) {
-                case FLAG_DWORD:
-                    *((unsigned int *) (cheatDMA + block[counter].address)) = block[counter].stdVal;
-                    sceKernelDcacheWritebackInvalidateRange(cheatDMA + block[counter].address, 4);
-                    sceKernelIcacheInvalidateRange(cheatDMA + block[counter].address, 4);
-                    break;
-                case FLAG_WORD:
-                    *((unsigned short *) (cheatDMA + block[counter].address)) = (unsigned short) block[counter].stdVal;
-                    sceKernelDcacheWritebackInvalidateRange(cheatDMA + block[counter].address, 2);
-                    sceKernelIcacheInvalidateRange(cheatDMA + block[counter].address, 2);
-                    break;
-                case FLAG_BYTE:
-                    *((unsigned char *) (cheatDMA + block[counter].address)) = (unsigned char) block[counter].stdVal;
-                    sceKernelDcacheWritebackInvalidateRange(cheatDMA + block[counter].address, 1);
-                    sceKernelIcacheInvalidateRange(cheatDMA + block[counter].address, 1);
-                    break;
-            }
-        }
-        counter++;
-    }
+    cheatToggle(a_cheat, 0);
 }
+
 
 void cheatApply(unsigned char a_type)//0=Enable/Disable FLAG_FRESH, -1=Enable only all (Freeze on all)
 {
@@ -1682,13 +1680,13 @@ void menuDraw() {
         pspDebugScreenPuts("[Cheats List] ");
         pspDebugScreenSetTextColor(tabSelected == 1 ? 0xFFFFFFFF : 0xFF808080);
         pspDebugScreenPuts("[Searcher] ");
-        pspDebugScreenSetTextColor(tabSelected == 2 ? 0xFFFFFFFF : 0xFF808080);
+        pspDebugScreenSetTextColor(tabSelected == 2 ? 0xFFFFFFFF : 0xFF808080); //was 3
         pspDebugScreenPuts("[Mem View] ");
-        pspDebugScreenSetTextColor(tabSelected == 3 ? 0xFFFFFFFF : 0xFF808080);
+        pspDebugScreenSetTextColor(tabSelected == 3 ? 0xFFFFFFFF : 0xFF808080); //was 4
         pspDebugScreenPuts("[Decoder] ");
-        pspDebugScreenSetTextColor(tabSelected == 4 ? 0xFFFFFFFF : 0xFF808080);
+        pspDebugScreenSetTextColor(tabSelected == 4 ? 0xFFFFFFFF : 0xFF808080); //was 5
         pspDebugScreenPuts("[Tools] ");
-        pspDebugScreenSetTextColor(tabSelected == 5 ? 0xFFFFFFFF : 0xFF808080);
+        pspDebugScreenSetTextColor(tabSelected == 5 ? 0xFFFFFFFF : 0xFF808080); //was 2
         pspDebugScreenPuts("[Settings] ");
         pspDebugScreenSetTextColor(0xFF808080);
         pspDebugScreenPuts("\n--------------------------------------------------------------------");
@@ -2890,7 +2888,7 @@ void menuInput() {
 
                                             lineClear(33);
                                             pspDebugScreenSetTextColor(0xFFFF8000);
-                                            sprintf(buffer, "Task = %02d%%; () = Hold to Abort",
+                                            sprintf(buffer, "Searching = %02d%%; () = Hold to Abort",
                                                     (scounter - 0x48804000) / ((0x4A000000 - 0x48804000) / 100));
                                             pspDebugScreenPuts(buffer);
 
@@ -2899,7 +2897,7 @@ void menuInput() {
                                             if (pad.Buttons & PSP_CTRL_CIRCLE) {
                                                 lineClear(33);
                                                 pspDebugScreenSetTextColor(0xFFFF8000);
-                                                pspDebugScreenPuts("Task Aborted!!!");
+                                                pspDebugScreenPuts("Search Aborted");
 
                                                 do {
                                                     sceKernelDelayThread(150000);
@@ -3272,7 +3270,7 @@ void menuInput() {
 
                                             lineClear(33);
                                             pspDebugScreenSetTextColor(0xFFFF8000);
-                                            sprintf(buffer, "Task = %02d%%; () = Hold to Abort",
+                                            sprintf(buffer, "Searching = %02d%%; () = Hold to Abort",
                                                     (counter - 0x48804000) / ((0x4A000000 - 0x48804000) / 100));
                                             pspDebugScreenPuts(buffer);
 
@@ -3281,7 +3279,7 @@ void menuInput() {
                                             if (pad.Buttons & PSP_CTRL_CIRCLE) {
                                                 lineClear(33);
                                                 pspDebugScreenSetTextColor(0xFFFF8000);
-                                                pspDebugScreenPuts("Task Aborted!!!");
+                                                pspDebugScreenPuts("Search Aborted");
 
                                                 do {
                                                     sceKernelDelayThread(150000);
@@ -3466,7 +3464,7 @@ void menuInput() {
 
                                             lineClear(33);
                                             pspDebugScreenSetTextColor(0xFFFF8000);
-                                            sprintf(buffer, "Task = %02d%%; () = Hold to Abort",
+                                            sprintf(buffer, "Searching = %02d%%; () = Hold to Abort",
                                                     (scounter - 0x48804000) / ((0x4A000000 - 0x48804000) / 100));
                                             pspDebugScreenPuts(buffer);
 
@@ -3475,7 +3473,7 @@ void menuInput() {
                                             if (pad.Buttons & PSP_CTRL_CIRCLE) {
                                                 lineClear(33);
                                                 pspDebugScreenSetTextColor(0xFFFF8000);
-                                                pspDebugScreenPuts("Task Aborted!!!");
+                                                pspDebugScreenPuts("Search Aborted");
 
                                                 do {
                                                     sceKernelDelayThread(150000);
@@ -3898,7 +3896,7 @@ void menuInput() {
 
                                     lineClear(33);
                                     pspDebugScreenSetTextColor(0xFFFF8000);
-                                    sprintf(buffer, "Task = %02d%%; () = Hold to Abort",
+                                    sprintf(buffer, "Searching = %02d%%; () = Hold to Abort",
                                             (counter - 0x48804000) / ((0x4A000000 - 0x48804000) / 100));
                                     pspDebugScreenPuts(buffer);
 
@@ -3907,7 +3905,7 @@ void menuInput() {
                                     if (pad.Buttons & PSP_CTRL_CIRCLE) {
                                         lineClear(33);
                                         pspDebugScreenSetTextColor(0xFFFF8000);
-                                        pspDebugScreenPuts("Task Aborted!!!");
+                                        pspDebugScreenPuts("Search Aborted");
 
                                         do {
                                             sceKernelDelayThread(150000);
@@ -4117,10 +4115,11 @@ void menuInput() {
                 if (tabSelected > 0) {
                     tabSelected--;
                 }
+
                 menuDraw();
                 sceKernelDelayThread(150000);
             }
-            if ((pad.Buttons & PSP_CTRL_RTRIGGER) && (tabSelected != 5)) {
+            if ((pad.Buttons & PSP_CTRL_RTRIGGER) && (tabSelected != 6)) {
                 pspDebugScreenInitEx(vram, 0, 0);
                 cheatSelected = 0;
                 extSelected[0] = extSelected[1] = extSelected[2] = extSelected[3] = 0;
@@ -4128,6 +4127,7 @@ void menuInput() {
                 if (tabSelected < 5) {
                     tabSelected++;
                 }
+
                 menuDraw();
                 sceKernelDelayThread(150000);
             }
@@ -4357,198 +4357,7 @@ void menuInput() {
                     }
                     break;
 
-                case 2://INPUT PRX
-                    if (pad.Buttons & PSP_CTRL_UP) {
-                        if (cheatSelected > 0) {
-                            cheatSelected--;
-                        } else if (cheatSelected == 0) {
-                            cheatSelected = 9;
-                        }
-                        menuDraw();
-                        if (cheatButtonAgeY < 12) cheatButtonAgeY++;
-                        sceKernelDelayThread(150000 - (10000 * cheatButtonAgeY));
-                    } else if (pad.Buttons & PSP_CTRL_DOWN) {
-                        if (cheatSelected < 9) {
-                            cheatSelected++;
-                        } else if (cheatSelected == 9) {
-                            cheatSelected = 0;
-                        }
-                        menuDraw();
-                        if (cheatButtonAgeY < 12) cheatButtonAgeY++;
-                        sceKernelDelayThread(150000 - (10000 * cheatButtonAgeY));
-                    } else {
-                        cheatButtonAgeY = 0;
-                    }
-                    if (pad.Buttons & PSP_CTRL_LEFT) {
-                        if ((cheatSelected == 8) && (cheatHz > 0)) {
-                            cheatHz -= 15625;
-                        }
-                        if ((cheatSelected == 3) && (dumpNo > 0)) {
-                            dumpNo--;
-                        }
-                        if ((cheatSelected == 2) && (dumpNo > 0)) {
-                            dumpNo--;
-                        }
-                        menuDraw();
-                        if (cheatButtonAgeX < 12) cheatButtonAgeX++;
-                        sceKernelDelayThread(150000 - (10000 * cheatButtonAgeX));
-                    } else if (pad.Buttons & PSP_CTRL_RIGHT) {
-                        if (cheatSelected == 8) {
-                            cheatHz += 15625;
-                        }
-                        if (cheatSelected == 3) {
-                            dumpNo++;
-                        }
-                        if (cheatSelected == 2) {
-                            dumpNo++;
-                        }
-                        menuDraw();
-                        if (cheatButtonAgeX < 12) cheatButtonAgeX++;
-                        sceKernelDelayThread(150000 - (10000 * cheatButtonAgeX));
-                    } else {
-                        cheatButtonAgeX = 0;
-                    }
-                    if (pad.Buttons & PSP_CTRL_CROSS) {
-                        if (cheatSelected == 0) {
-                            cheatPause = !cheatPause;
-                            menuDraw();
-
-                            if (cheatPause) {
-                                gamePause(thid);
-                            } else {
-                                gameResume(thid);
-                            }
-                        } else if (cheatSelected == 1) {
-                            cheatNew(4, 0x4000, 0);
-
-                            //Switch to the cheat editor
-                            pspDebugScreenInitEx(vram, 0, 0);
-                            extSelected[1] = extSelected[2] = extSelected[3] = 0;
-                            extSelected[0] = cheat[cheatTotal - 1].block;
-                            cheatSelected = cheatTotal - 1;
-                            extMenu = 1;
-                            extOpt = 1;
-                            menuDraw();
-                            sceKernelDelayThread(150000);
-                        } else if (cheatSelected == 2) {
-                            sprintf(buffer, "ms0:/dump%d.ram", dumpNo);
-
-                            fd = sceIoOpen(buffer, PSP_O_RDONLY, 0777);
-                            if (fd > 0) {
-                                counter = 0;
-                                while (counter < cheatTotal) {
-                                    scounter = cheat[counter].block;
-                                    cheatDMA = 0;
-                                    while (scounter < cheat[counter].block + cheat[counter].len) {
-                                        if (block[scounter].flags & FLAG_DMA) {
-                                            if (block[scounter].hakVal != 0xFFFFFFFF) {
-                                                sceIoLseek(fd, block[scounter].hakVal, SEEK_SET);
-                                                sceIoRead(fd, &cheatDMA, sizeof(unsigned int));
-                                                block[scounter].stdVal = cheatDMA;
-                                            } else {
-                                                cheatDMA = 0;
-                                            }
-                                        } else {
-                                            sceIoLseek(fd, (cheatDMA + block[scounter].address) - 0x08800000, SEEK_SET);
-                                            switch (block[scounter].flags & FLAG_DWORD) {
-                                                case FLAG_DWORD:
-                                                    sceIoRead(fd, &block[scounter].stdVal, sizeof(unsigned int));
-                                                    break;
-                                                case FLAG_WORD:
-                                                    sceIoRead(fd, &block[scounter].stdVal, sizeof(unsigned short));
-                                                    break;
-                                                case FLAG_BYTE:
-                                                    sceIoRead(fd, &block[scounter].stdVal, sizeof(unsigned char));
-                                                    break;
-                                            }
-                                        }
-
-                                        scounter++;
-                                    }
-
-                                    cheatDisable(counter);
-                                    counter++;
-                                }
-                                sceIoClose(fd);
-
-                                cheatStatus = 0;
-                            } else {
-                                lineClear(33);
-                                pspDebugScreenSetTextColor(0xFF0000FF);
-                                pspDebugScreenPuts("ERROR: Selected RAM Dump # does not exist!");
-                                sceKernelDelayThread(3000000);
-                            }
-
-                            menuDraw();
-                        } else if (cheatSelected == 3) {
-                            sprintf(buffer, "ms0:/dump%d.ram", dumpNo);
-
-                            fd = sceIoOpen(buffer, PSP_O_WRONLY | PSP_O_CREAT, 0777);
-                            if (fd > 0) {
-                                if (sceIoWrite(fd, (void *) 0x08800000, 0x1800000) == 0x1800000) {
-                                    sceIoClose(fd);
-
-                                    dumpNo++;
-                                } else {
-                                    sceIoClose(fd);
-
-                                    sceIoRemove(buffer);
-
-                                    lineClear(33);
-                                    pspDebugScreenSetTextColor(0xFF0000FF);
-                                    pspDebugScreenPuts("ERROR: MemoryStick out of Space!");
-                                    sceKernelDelayThread(3000000);
-                                }
-                            }
-                            menuDraw();
-                            sceKernelDelayThread(150000);//Delay twice
-                        } else if (cheatSelected == 4) {
-                            if (browseLines == 8) {
-                                browseLines = 16;
-                            } else {
-                                browseLines = 8;
-                            }
-                            browseC = 0;
-                            browseX = 0;
-                            browseY = 0;
-                            if (browseAddress < 0x48804000) {
-                                browseAddress = 0x48804000;
-                            }
-                            if (browseAddress > (0x4A000000 - (22 * browseLines))) {
-                                browseAddress = (0x4A000000 - (22 * browseLines));
-                            }
-                            menuDraw();
-                        } else if (cheatSelected == 5) {
-                            if (browseFormat == 0x48800000) {
-                                browseFormat = 0x40000000;
-                            } else {
-                                browseFormat = 0x48800000;
-                            }
-                            menuDraw();
-                        } else if (cheatSelected == 6) {
-                            if (decodeFormat == 0x48800000) {
-                                decodeFormat = 0x40000000;
-                            } else {
-                                decodeFormat = 0x48800000;
-                            }
-                            menuDraw();
-                        } else if (cheatSelected == 7) {
-                            if (trackFormat == 0x48800000) {
-                                trackFormat = 0x40000000;
-                            } else {
-                                trackFormat = 0x48800000;
-                            }
-                            menuDraw();
-                        } else if (cheatSelected == 9) {
-                            cheatSave();
-                            menuDraw();
-                            sceKernelDelayThread(150000);//Delay twice
-                        }
-                        sceKernelDelayThread(150000);
-                    }
-                    break;
-
-                case 3://INPUT BROWSER
+                case 2://INPUT BROWSER
                     if (pad.Buttons & PSP_CTRL_SELECT) {
                         copyMenu = 1;
                         menuDraw();
@@ -4779,7 +4588,7 @@ void menuInput() {
                     }
                     break;
 
-                case 4://INPUT DECODER
+                case 3://INPUT DECODER
                     if (pad.Buttons & PSP_CTRL_SELECT) {
                         copyMenu = 1;
                         menuDraw();
@@ -4941,7 +4750,7 @@ void menuInput() {
                     }
                     break;
 
-                case 5://INPUT TRACKER
+                case 4://INPUT TOOLS
                     if ((pad.Buttons & PSP_CTRL_SELECT) && (!trackStatus)) {
                         copyMenu = 1;
                         menuDraw();
@@ -5076,6 +4885,197 @@ void menuInput() {
                         } else {
                             cheatButtonAgeY = 0;
                         }
+                    }
+                    break;
+
+                case 5://INPUT SETTINGS
+                    if (pad.Buttons & PSP_CTRL_UP) {
+                        if (cheatSelected > 0) {
+                            cheatSelected--;
+                        } else if (cheatSelected == 0) {
+                            cheatSelected = 9;
+                        }
+                        menuDraw();
+                        if (cheatButtonAgeY < 12) cheatButtonAgeY++;
+                        sceKernelDelayThread(150000 - (10000 * cheatButtonAgeY));
+                    } else if (pad.Buttons & PSP_CTRL_DOWN) {
+                        if (cheatSelected < 9) {
+                            cheatSelected++;
+                        } else if (cheatSelected == 9) {
+                            cheatSelected = 0;
+                        }
+                        menuDraw();
+                        if (cheatButtonAgeY < 12) cheatButtonAgeY++;
+                        sceKernelDelayThread(150000 - (10000 * cheatButtonAgeY));
+                    } else {
+                        cheatButtonAgeY = 0;
+                    }
+                    if (pad.Buttons & PSP_CTRL_LEFT) {
+                        if ((cheatSelected == 8) && (cheatHz > 0)) {
+                            cheatHz -= 15625;
+                        }
+                        if ((cheatSelected == 3) && (dumpNo > 0)) {
+                            dumpNo--;
+                        }
+                        if ((cheatSelected == 2) && (dumpNo > 0)) {
+                            dumpNo--;
+                        }
+                        menuDraw();
+                        if (cheatButtonAgeX < 12) cheatButtonAgeX++;
+                        sceKernelDelayThread(150000 - (10000 * cheatButtonAgeX));
+                    } else if (pad.Buttons & PSP_CTRL_RIGHT) {
+                        if (cheatSelected == 8) {
+                            cheatHz += 15625;
+                        }
+                        if (cheatSelected == 3) {
+                            dumpNo++;
+                        }
+                        if (cheatSelected == 2) {
+                            dumpNo++;
+                        }
+                        menuDraw();
+                        if (cheatButtonAgeX < 12) cheatButtonAgeX++;
+                        sceKernelDelayThread(150000 - (10000 * cheatButtonAgeX));
+                    } else {
+                        cheatButtonAgeX = 0;
+                    }
+                    if (pad.Buttons & PSP_CTRL_CROSS) {
+                        if (cheatSelected == 0) {
+                            cheatPause = !cheatPause;
+                            menuDraw();
+
+                            if (cheatPause) {
+                                gamePause(thid);
+                            } else {
+                                gameResume(thid);
+                            }
+                        } else if (cheatSelected == 1) {
+                            cheatNew(4, 0x4000, 0);
+
+                            //Switch to the cheat editor
+                            pspDebugScreenInitEx(vram, 0, 0);
+                            extSelected[1] = extSelected[2] = extSelected[3] = 0;
+                            extSelected[0] = cheat[cheatTotal - 1].block;
+                            cheatSelected = cheatTotal - 1;
+                            extMenu = 1;
+                            extOpt = 1;
+                            menuDraw();
+                            sceKernelDelayThread(150000);
+                        } else if (cheatSelected == 2) {
+                            sprintf(buffer, "ms0:/dump%d.ram", dumpNo);
+
+                            fd = sceIoOpen(buffer, PSP_O_RDONLY, 0777);
+                            if (fd > 0) {
+                                counter = 0;
+                                while (counter < cheatTotal) {
+                                    scounter = cheat[counter].block;
+                                    cheatDMA = 0;
+                                    while (scounter < cheat[counter].block + cheat[counter].len) {
+                                        if (block[scounter].flags & FLAG_DMA) {
+                                            if (block[scounter].hakVal != 0xFFFFFFFF) {
+                                                sceIoLseek(fd, block[scounter].hakVal, SEEK_SET);
+                                                sceIoRead(fd, &cheatDMA, sizeof(unsigned int));
+                                                block[scounter].stdVal = cheatDMA;
+                                            } else {
+                                                cheatDMA = 0;
+                                            }
+                                        } else {
+                                            sceIoLseek(fd, (cheatDMA + block[scounter].address) - 0x08800000, SEEK_SET);
+                                            switch (block[scounter].flags & FLAG_DWORD) {
+                                                case FLAG_DWORD:
+                                                    sceIoRead(fd, &block[scounter].stdVal, sizeof(unsigned int));
+                                                    break;
+                                                case FLAG_WORD:
+                                                    sceIoRead(fd, &block[scounter].stdVal, sizeof(unsigned short));
+                                                    break;
+                                                case FLAG_BYTE:
+                                                    sceIoRead(fd, &block[scounter].stdVal, sizeof(unsigned char));
+                                                    break;
+                                            }
+                                        }
+
+                                        scounter++;
+                                    }
+
+                                    cheatDisable(counter);
+                                    counter++;
+                                }
+                                sceIoClose(fd);
+
+                                cheatStatus = 0;
+                            } else {
+                                lineClear(33);
+                                pspDebugScreenSetTextColor(0xFF0000FF);
+                                pspDebugScreenPuts("ERROR: Selected RAM Dump # does not exist!");
+                                sceKernelDelayThread(3000000);
+                            }
+
+                            menuDraw();
+                        } else if (cheatSelected == 3) {
+                            sprintf(buffer, "ms0:/dump%d.ram", dumpNo);
+
+                            fd = sceIoOpen(buffer, PSP_O_WRONLY | PSP_O_CREAT, 0777);
+                            if (fd > 0) {
+                                if (sceIoWrite(fd, (void *) 0x08800000, 0x1800000) == 0x1800000) {
+                                    sceIoClose(fd);
+
+                                    dumpNo++;
+                                } else {
+                                    sceIoClose(fd);
+
+                                    sceIoRemove(buffer);
+
+                                    lineClear(33);
+                                    pspDebugScreenSetTextColor(0xFF0000FF);
+                                    pspDebugScreenPuts("ERROR: MemoryStick out of Space!");
+                                    sceKernelDelayThread(3000000);
+                                }
+                            }
+                            menuDraw();
+                            sceKernelDelayThread(150000);//Delay twice
+                        } else if (cheatSelected == 4) {
+                            if (browseLines == 8) {
+                                browseLines = 16;
+                            } else {
+                                browseLines = 8;
+                            }
+                            browseC = 0;
+                            browseX = 0;
+                            browseY = 0;
+                            if (browseAddress < 0x48804000) {
+                                browseAddress = 0x48804000;
+                            }
+                            if (browseAddress > (0x4A000000 - (22 * browseLines))) {
+                                browseAddress = (0x4A000000 - (22 * browseLines));
+                            }
+                            menuDraw();
+                        } else if (cheatSelected == 5) {
+                            if (browseFormat == 0x48800000) {
+                                browseFormat = 0x40000000;
+                            } else {
+                                browseFormat = 0x48800000;
+                            }
+                            menuDraw();
+                        } else if (cheatSelected == 6) {
+                            if (decodeFormat == 0x48800000) {
+                                decodeFormat = 0x40000000;
+                            } else {
+                                decodeFormat = 0x48800000;
+                            }
+                            menuDraw();
+                        } else if (cheatSelected == 7) {
+                            if (trackFormat == 0x48800000) {
+                                trackFormat = 0x40000000;
+                            } else {
+                                trackFormat = 0x48800000;
+                            }
+                            menuDraw();
+                        } else if (cheatSelected == 9) {
+                            cheatSave();
+                            menuDraw();
+                            sceKernelDelayThread(150000);//Delay twice
+                        }
+                        sceKernelDelayThread(150000);
                     }
                     break;
             }
