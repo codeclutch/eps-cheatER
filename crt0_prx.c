@@ -16,6 +16,8 @@
 #include <pspthreadman.h>
 #include <pspthreadman_kernel.h>
 #include <pspumd.h>
+#include <pspusb.h>
+#include <pspusbstor.h>
 #include <psputility.h>
 #include <psputility_savedata.h>
 #include <pspwlan.h>
@@ -2067,7 +2069,7 @@ void menuDraw() {
 
             case 5://DRAW SETTINGS
                 counter = 0;
-                while (counter < 10) {
+                while (counter < 11) {
                     if (cheatSelected == counter) {
                         //Highlight the selection
                         pspDebugScreenSetTextColor(0xFF0000FF);
@@ -2128,7 +2130,11 @@ void menuDraw() {
                             pspDebugScreenPuts(buffer);
                             break;
                         case 9:
-                            pspDebugScreenPuts("  Save cheats?\n");
+                            pspDebugScreenPuts("  Save cheats\n");
+                            break;
+
+                        case 10:
+                            pspDebugScreenPuts("  Enable USB\n");
                             break;
                     }
                     counter++;
@@ -4091,13 +4097,15 @@ void menuInput() {
             }
         } else {
             //Overall button inputs
-            if ((pad.Buttons & PSP_CTRL_LTRIGGER) && (tabSelected != 0)) {
+            if ((pad.Buttons & PSP_CTRL_LTRIGGER) && (tabSelected != -1)) {
                 pspDebugScreenInitEx(vram, 0, 0);
                 cheatSelected = 0;
                 extSelected[0] = extSelected[1] = extSelected[2] = extSelected[3] = 0;
                 extOpt = 0;
                 if (tabSelected > 0) {
                     tabSelected--;
+                } else if (tabSelected == 0) {
+                    tabSelected = 5;
                 }
 
                 menuDraw();
@@ -4110,6 +4118,8 @@ void menuInput() {
                 extOpt = 0;
                 if (tabSelected < 5) {
                     tabSelected++;
+                } else if (tabSelected == 5) {
+                    tabSelected = 0;
                 }
 
                 menuDraw();
@@ -4162,7 +4172,7 @@ void menuInput() {
             }
 
             //Choose the appropriate action based on the tabSelected
-            //Used for each tabs menu. make sure if moving tabs around in
+            //Used for each tab menu. make sure if moving tabs around in
             //the menuDraw function to update this switch statement
             switch (tabSelected) {
                 case 0://INPUT CHEATER
@@ -4879,15 +4889,15 @@ void menuInput() {
                         if (cheatSelected > 0) {
                             cheatSelected--;
                         } else if (cheatSelected == 0) {
-                            cheatSelected = 9;
+                            cheatSelected = 10;
                         }
                         menuDraw();
                         if (cheatButtonAgeY < 12) cheatButtonAgeY++;
                         sceKernelDelayThread(150000 - (10000 * cheatButtonAgeY));
                     } else if (pad.Buttons & PSP_CTRL_DOWN) {
-                        if (cheatSelected < 9) {
+                        if (cheatSelected < 10) {
                             cheatSelected++;
-                        } else if (cheatSelected == 9) {
+                        } else if (cheatSelected == 10) {
                             cheatSelected = 0;
                         }
                         menuDraw();
@@ -5060,6 +5070,21 @@ void menuInput() {
                             cheatSave();
                             menuDraw();
                             sceKernelDelayThread(150000);//Delay twice
+                        }
+                        else if (cheatSelected == 10) {
+
+                            if(pad.Buttons & PSP_CTRL_CROSS) {
+                            sceUsbStart(PSP_USBBUS_DRIVERNAME, 0, 0);
+                            sceUsbStart(PSP_USBSTOR_DRIVERNAME, 0, 0);
+
+                            sceUsbActivate(0x1C8);
+                            }
+                            else {
+
+                                sceUsbDeactivate(0);
+                                sceUsbStop(PSP_USBBUS_DRIVERNAME, 0, 0);
+                                sceUsbStop(PSP_USBSTOR_DRIVERNAME, 0, 0);
+                            }
                         }
                         sceKernelDelayThread(150000);
                     }
