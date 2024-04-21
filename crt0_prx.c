@@ -5072,18 +5072,15 @@ void menuInput() {
                             sceKernelDelayThread(150000);//Delay twice
                         }
                         else if (cheatSelected == 10) {
-
-                            if(pad.Buttons & PSP_CTRL_CROSS) {
-                            sceUsbStart(PSP_USBBUS_DRIVERNAME, 0, 0);
-                            sceUsbStart(PSP_USBSTOR_DRIVERNAME, 0, 0);
-
-                            sceUsbActivate(0x1C8);
-                            }
-                            else {
-
-                                sceUsbDeactivate(0);
-                                sceUsbStop(PSP_USBBUS_DRIVERNAME, 0, 0);
-                                sceUsbStop(PSP_USBSTOR_DRIVERNAME, 0, 0);
+                            if (pad.Buttons & PSP_CTRL_CROSS) {
+                                int usbState = sceUsbGetState();
+                                if (usbState & PSP_USB_ACTIVATED) {
+                                    sceUsbDeactivate(0x2D2);
+                                    sceUsbStop(PSP_USBBUS_DRIVERNAME, 0, 0);
+                                } else {
+                                    sceUsbStart(PSP_USBBUS_DRIVERNAME, 0, 0);
+                                    sceUsbActivate(0x2D2);
+                                }
                             }
                         }
                         sceKernelDelayThread(150000);
