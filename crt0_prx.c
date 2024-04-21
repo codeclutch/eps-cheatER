@@ -1747,20 +1747,11 @@ void menuDraw() {
                 counter = 0;
                 while (counter < (3 + ((!cheatSearch) * 2))) {
                     //Scroll feature right here, in two lines =3
-                    if ((signed int) counter < (signed int) ((cheatSelected - 12) -
-                                                             ((((signed int) cheatSelected + 12) -
-                                                               ((signed int) cheatTotal)) > 0
-                                                                      ? abs(
-                                                                                ((signed int) cheatSelected + 12) -
-                                                                                ((signed int) cheatTotal))
-                                                                      : 0))) {
+                    if ((int) counter < (int) ((cheatSelected - 12) - ((((int) cheatSelected + 12) - ((int) cheatTotal)) > 0 ? abs(((int) cheatSelected + 12) - ((int) cheatTotal)): 0))) {
                         counter++;
                         continue;
                     }
-                    if ((signed int) counter > (signed int) ((cheatSelected + 12) +
-                                                             (((signed int) cheatSelected - 12) < 0 ? abs(
-                                                                                                              (signed int) (cheatSelected - 12))
-                                                                                                    : 0))) {
+                    if ((int) counter > (int) ((cheatSelected + 12) + (((int) cheatSelected - 12) < 0 ? abs((int) (cheatSelected - 12)) : 0))) {
                         counter++;
                         continue;
                     }
@@ -2755,8 +2746,8 @@ void menuInput() {
 
                                             lineClear(33);
                                             pspDebugScreenSetTextColor(0xFFFF8000);
-                                            sprintf(buffer, "Searching = %02d%%; () = Hold to Abort",
-                                                    (counter - 0x48804000) / ((0x4A000000 - 0x48804000) / 100));
+                                            sprintf(buffer, "Searching = %02d%%; Hold () to Abort",
+                                                    ((counter - 0x48804000) * 100) / (0x4A000000 - 0x48804000));
                                             pspDebugScreenPuts(buffer);
 
                                             sceCtrlPeekBufferPositive(&pad, 1);
@@ -2881,8 +2872,8 @@ void menuInput() {
 
                                             lineClear(33);
                                             pspDebugScreenSetTextColor(0xFFFF8000);
-                                            sprintf(buffer, "Searching = %02d%%; () = Hold to Abort",
-                                                    (scounter - 0x48804000) / ((0x4A000000 - 0x48804000) / 100));
+                                            sprintf(buffer, "Searching = %02d%%; Hold () to Abort",
+                                                    ((counter - 0x48804000) * 100) / (0x4A000000 - 0x48804000));
                                             pspDebugScreenPuts(buffer);
 
                                             sceCtrlPeekBufferPositive(&pad, 1);
@@ -3263,8 +3254,8 @@ void menuInput() {
 
                                             lineClear(33);
                                             pspDebugScreenSetTextColor(0xFFFF8000);
-                                            sprintf(buffer, "Searching = %02d%%; () = Hold to Abort",
-                                                    (counter - 0x48804000) / ((0x4A000000 - 0x48804000) / 100));
+                                            sprintf(buffer, "Searching = %02d%%; Hold () to Abort",
+                                                    ((counter - 0x48804000) * 100) / (0x4A000000 - 0x48804000));
                                             pspDebugScreenPuts(buffer);
 
                                             sceCtrlPeekBufferPositive(&pad, 1);
@@ -3457,8 +3448,8 @@ void menuInput() {
 
                                             lineClear(33);
                                             pspDebugScreenSetTextColor(0xFFFF8000);
-                                            sprintf(buffer, "Searching = %02d%%; () = Hold to Abort",
-                                                    (scounter - 0x48804000) / ((0x4A000000 - 0x48804000) / 100));
+                                            sprintf(buffer, "Searching = %02d%%; Hold () to Abort",
+                                                    ((counter - 0x48804000) * 100) / (0x4A000000 - 0x48804000));
                                             pspDebugScreenPuts(buffer);
 
                                             sceCtrlPeekBufferPositive(&pad, 1);
@@ -3889,8 +3880,8 @@ void menuInput() {
 
                                     lineClear(33);
                                     pspDebugScreenSetTextColor(0xFFFF8000);
-                                    sprintf(buffer, "Searching = %02d%%; () = Hold to Abort",
-                                            (counter - 0x48804000) / ((0x4A000000 - 0x48804000) / 100));
+                                    sprintf(buffer, "Searching = %02d%%; Hold () to Abort",
+                                            ((counter - 0x48804000) * 100) / (0x4A000000 - 0x48804000));
                                     pspDebugScreenPuts(buffer);
 
                                     sceCtrlPeekBufferPositive(&pad, 1);
