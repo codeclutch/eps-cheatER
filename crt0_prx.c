@@ -167,15 +167,6 @@ unsigned char screenPath[64] = {0};
     pspDebugScreenPuts("                                                                   "); \
     pspDebugScreenSetXY(0, a_line);
 
-int linearSearch(char *arr[], int size, char *target) {
-    for(int i = 0; i < size; i++) {
-        if(strcmp(arr[i], target) == 0) {
-            return i; // return the index of the found element
-        }
-    }
-    return -1; // return -1 if the element is not found
-}
-
 //Arrays
 unsigned int decDelta[10] = {1000000000, 100000000, 10000000, 1000000, 100000, 10000, 1000, 100, 10, 1};
 unsigned char *searchModeName[] = {
