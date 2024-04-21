@@ -506,62 +506,6 @@ void cheatApply(unsigned char a_type)//0=Enable/Disable FLAG_FRESH, -1=Enable on
     }
 }
 
-/*void cheatDebug()
-{
-  unsigned int counter=0;
-  int fd;
-
-  fd=sceIoOpen("ms0:/debug.bin", PSP_O_WRONLY | PSP_O_CREAT, 0777);
-  sceIoWrite(fd, block, sizeof(Block) * blockTotal);
-  sceIoClose(fd);
-
-  fd=sceIoOpen("ms0:/debug.txt", PSP_O_WRONLY | PSP_O_CREAT, 0777);
-
-  while(counter < cheatTotal)
-  {
-    //Write the cheat name
-    sprintf(buffer, "#%s\r\n", cheat[counter].name);
-    sceIoWrite(fd, buffer, strlen(buffer));
-
-    unsigned int scounter=cheat[counter].block;
-    while(scounter < (cheat[counter].block+cheat[counter].len))
-    {
-      switch(block[scounter].flags & FLAG_DWORD)
-      {
-        case FLAG_DWORD:
-        	sprintf(buffer, "dword ");
-          sceIoWrite(fd, buffer, strlen(buffer));
-          break;
-
-        case FLAG_WORD:
-        	sprintf(buffer, "word ");
-          sceIoWrite(fd, buffer, strlen(buffer));
-        	break;
-
-        case FLAG_BYTE:
-        	sprintf(buffer, "byte ");
-          sceIoWrite(fd, buffer, strlen(buffer));
-        	break;
-
-        default:
-        	sprintf(buffer, "uword ");
-          sceIoWrite(fd, buffer, strlen(buffer));
-		  }
-
-
-      sprintf(buffer, "0x%08lX 0x%08lX\r\n", (block[scounter].address - 0x08800000), block[scounter].hakVal);
-    	sceIoWrite(fd, buffer, strlen(buffer));
-
-      scounter++;
-    }
-
-    counter++;
-    sceIoWrite(fd, "\r\n", 2);
-  }
-
-  sceIoClose(fd);
-}*/
-
 void cheatSave() {
     unsigned char fileChar = 0;
     unsigned char fileMisc[3];
@@ -5111,16 +5055,6 @@ static const unsigned char patchA[] = {0x21, 0x88, 0x02, 0x3c,//lui v0, $8822
                                        0x08, 0x00, 0x40, 0x00,//jr v0
                                        0x00, 0x00, 0x00, 0x00};
 
-/*Hook hookD[1] =
-{
-  //{ { 0, NULL }, "sceNetInet_Library", "sceNetInet", 0x05038fc7, NULL},
-  //{ { 0, NULL }, "sceNet_Library", "sceNet_lib", 0x8d33c11d, NULL}, //Config - getEtherAddress
-  //{ { 0, NULL }, "sceNet_Library", "sceNet", 0x0bf0a3ae, NULL}, //Netlib
-  //{ { 0, NULL }, "sceWlan_Driver", "sceWlanDrv", 0x0c622081, NULL}, //Wlan
-  { { 0, NULL }, "sceOpenPSID_Service", "sceOpenPSID_driver", 0xc69bebce, NULL}, //sceNetInetGetTcpcbstat
-  //{ { 0, NULL }, "sceNetInet_Library", "sceNetInet", 0xc91142e4, NULL},
-};*/
-
 #include "headers/screenshot.h"
 
 int mainThread() {
@@ -5189,22 +5123,6 @@ int mainThread() {
         }
     }
 
-    //Function hunter
-    /*while(1)
-  {
-    int mod=sceKernelFindModuleByName(hookD[0].modname);
-    if(mod == NULL) { sceKernelDelayThread(100); continue;}
-    break;
-  }
-  unsigned int hookAddress=moduleFindFunc(moduleFindLibrary(sceKernelSearchModuleByName(hookD[0].modname), hookD[0].libname), hookD[0].nid);
-  hookAddress=*((unsigned int*)hookAddress);
-
-  fd=sceIoOpen("ms0:/patch.txt", PSP_O_WRONLY | PSP_O_CREAT, 0777);
-  sceIoWrite(fd, &hookAddress, 4);
-  sceIoClose(fd);*/
-
-    //OpenPSID
-    //if(cfg[19])
     {
         //Generate the patch
         *((unsigned short *) (&patchA[0])) = (unsigned short) (((unsigned int) sceOpenPSIDGetOpenPSID) >> 16);
