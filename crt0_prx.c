@@ -1676,6 +1676,8 @@ void menuDraw() {
         }
     } else {
         //Draw the tabs
+        //Used for each tabs menu. make sure if moving tabs around here
+        // the tabSelected is updated to reflect the new tab order
         pspDebugScreenSetTextColor(tabSelected == 0 ? 0xFFFFFFFF : 0xFF808080);
         pspDebugScreenPuts("[Cheats List] ");
         pspDebugScreenSetTextColor(tabSelected == 1 ? 0xFFFFFFFF : 0xFF808080);
@@ -4178,6 +4180,8 @@ void menuInput() {
             }
 
             //Choose the appropriate action based on the tabSelected
+            //Used for each tabs menu. make sure if moving tabs around in
+            //the menuDraw function to update this switch statement
             switch (tabSelected) {
                 case 0://INPUT CHEATER
                     if (pad.Buttons & PSP_CTRL_UP) {
