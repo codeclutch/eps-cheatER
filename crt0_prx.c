@@ -2121,6 +2121,9 @@ void menuDraw() {
                     case 9:
                         pspDebugScreenPuts("Save your cheats");
                         break;
+                    case 10:
+                        pspDebugScreenPuts("Enable USB");
+                        break;
                 }
                 lineClear(33);
                 if ((cheatSelected != 8) && (cheatSelected != 3) && (cheatSelected != 2)) {
@@ -4119,7 +4122,7 @@ void menuInput() {
             //Used for each tab menu. make sure if moving tabs around in
             //the menuDraw function to update this switch statement
             switch (tabSelected) {
-                case 0://INPUT CHEATER
+                case 0://INPUT CHEATS LIST
                     if (pad.Buttons & PSP_CTRL_UP) {
                         if (cheatSelected > 0) {
                             cheatSelected--;
@@ -4297,7 +4300,7 @@ void menuInput() {
                     }
                     break;
 
-                case 2://INPUT BROWSER
+                case 2://INPUT MEM VIEW
                     if (pad.Buttons & PSP_CTRL_SELECT) {
                         copyMenu = 1;
                         menuDraw();
@@ -4691,6 +4694,7 @@ void menuInput() {
                     break;
 
                 case 4://INPUT TOOLS
+                    /*
                     if ((pad.Buttons & PSP_CTRL_SELECT) && (!trackStatus)) {
                         copyMenu = 1;
                         menuDraw();
@@ -4825,8 +4829,8 @@ void menuInput() {
                         } else {
                             cheatButtonAgeY = 0;
                         }
-                    }
-                    break;
+                    }*/
+                    continue;
 
                 case 5://INPUT SETTINGS
                     if (pad.Buttons & PSP_CTRL_UP) {
@@ -5016,17 +5020,20 @@ void menuInput() {
                             sceKernelDelayThread(150000);//Delay twice
                         }
                         else if (cheatSelected == 10) {
-                            if (pad.Buttons & PSP_CTRL_CROSS) {
-                                int usbState = sceUsbGetState();
-                                if (usbState & PSP_USB_ACTIVATED) {
-                                    sceUsbDeactivate(0x2D2);
-                                    sceUsbStop(PSP_USBBUS_DRIVERNAME, 0, 0);
-                                } else {
-                                    sceUsbStart(PSP_USBBUS_DRIVERNAME, 0, 0);
-                                    sceUsbActivate(0x2D2);
-                                }
+                            int usbState = sceUsbGetState();
+                            if (usbState & PSP_USB_ACTIVATED) {
+                                sceUsbDeactivate(0x02d2);
+                                sceUsbStop(PSP_USBBUS_DRIVERNAME, 0, 0);
+                                sceUsbStop(PSP_USBBUS_DRIVERNAME,0,0);
+                            } else {
+                                sceUsbStart(PSP_USBBUS_DRIVERNAME, 0, 0);
+                                sceUsbStart(PSP_USBSTOR_DRIVERNAME, 0, 0);
+                                sceUsbActivate(0x02d2);
                             }
+                            menuDraw();
+                            sceKernelDelayThread(150000);
                         }
+
                         sceKernelDelayThread(150000);
                     }
                     break;
