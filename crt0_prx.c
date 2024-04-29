@@ -13,6 +13,7 @@
 #include <pspmoduleinfo.h>
 #include <pspmodulemgr.h>
 #include <psppower.h>
+#include <pspsdk.h>
 #include <pspthreadman.h>
 #include <pspthreadman_kernel.h>
 #include <pspumd.h>
@@ -78,6 +79,10 @@ typedef struct Cheat {
 
 #define BLOCK_MAX 2048
 
+#define START_ADDRESS 0x48804000
+#define END_ADDRESS 0x4A000000
+#define SKIP_BYTES 0x4000
+
 //Globals
 SceCtrlData pad;
 unsigned int blockTotal = 0;
@@ -110,7 +115,7 @@ unsigned int searchHistoryCounter = 0;
 Block searchHistory[16];
 unsigned int searchResultCounter = 0;
 unsigned int searchAddress[100];
-unsigned int browseAddress = 0x48804000;
+unsigned int browseAddress = START_ADDRESS;
 unsigned int browseY = 0;
 unsigned int browseC = 0;
 unsigned int browseX = 0;
@@ -118,11 +123,11 @@ unsigned int browseLines = 16;
 unsigned int decodeFormat = 0x48800000;
 unsigned int trackFormat = 0x48800000;
 unsigned int browseFormat = 0x48800000;
-unsigned int decodeAddress = 0x48804000;
+unsigned int decodeAddress = START_ADDRESS;
 unsigned int decodeY = 0;
 unsigned int decodeC = 0;
 unsigned int decodeX = 0;
-unsigned int trackAddress = 0x48804000;
+unsigned int trackAddress = START_ADDRESS;
 unsigned int trackY = 0;
 unsigned int trackX = 0;
 unsigned int trackC = 0;
@@ -146,6 +151,9 @@ unsigned int fileBufferOffset = 1024;
 unsigned int screenNo = 0;
 
 unsigned char screenPath[64] = {0};
+
+char* getGamePathFromID(char* gameID);
+
 
 #define fileBufferPeek(a_out, a_ahead)                  \
     if ((fileBufferOffset + a_ahead) >= 1024) {         \
@@ -375,7 +383,7 @@ void cheatToggle(unsigned int a_cheat, unsigned char enable) {
     cheatDMA = 0;
 
     counter = cheat[a_cheat].block;
-    while (counter < (cheat[a_cheat].block + cheat[a_cheat].len)){
+    while (counter < (cheat[a_cheat].block + cheat[a_cheat].len)) {
         if (block[counter].flags & FLAG_DMA) {
             if (block[counter].hakVal != 0xFFFFFFFF) {
                 cheatDMA = *((unsigned int *) (0x08800000 + (block[counter].hakVal & 0x1FFFFFF))) - 0x08800000;
@@ -391,7 +399,7 @@ void cheatToggle(unsigned int a_cheat, unsigned char enable) {
                 resetDMA = 0;
             }
         } else {
-            if (enable){
+            if (enable) {
                 if (((cheatDMA) && (resetDMA)) ||
                     ((cheat[a_cheat].flags & FLAG_FRESH) && (block[counter].flags & FLAG_FREEZE))) {
                     switch (block[counter].flags & FLAG_DWORD) {
@@ -428,9 +436,8 @@ void cheatToggle(unsigned int a_cheat, unsigned char enable) {
                         sceKernelIcacheInvalidateRange(cheatDMA + block[counter].address, 1);
                         break;
                 }
-            }
-            else{
-                if (!resetDMA){
+            } else {
+                if (!resetDMA) {
                     switch (block[counter].flags & FLAG_DWORD) {
                         case FLAG_DWORD:
                             *((unsigned int *) (cheatDMA + block[counter].address)) = block[counter].stdVal;
@@ -454,7 +461,6 @@ void cheatToggle(unsigned int a_cheat, unsigned char enable) {
         }
     }
 }
-
 
 
 void cheatEnable(unsigned int a_cheat) {
@@ -765,7 +771,7 @@ void buttonCallback(int curr, int last, void *arg) {
                     address = cheatDMA + block[counter].address;
 
                     if (((address >= 0x08804000) && (address < 0x0A000000)) ||
-                        ((address >= 0x48804000) && (address < 0x4A000000))) {
+                        ((address >= START_ADDRESS) && (address < END_ADDRESS))) {
                         switch (block[counter].flags & FLAG_DWORD) {
                             case FLAG_DWORD:
                                 if (address % 4 == 0) {
@@ -1584,7 +1590,7 @@ void menuDraw() {
                     memset(buffer, 0, 17);
                     scounter = 0;
                     while (scounter < 16) {
-                        if ((searchAddress[counter] + scounter) < 0x4A000000) {
+                        if ((searchAddress[counter] + scounter) < END_ADDRESS) {
                             buffer[scounter] = *((unsigned char *) (searchAddress[counter] + scounter));
                             if ((buffer[scounter] <= 0x20) || (buffer[scounter] == 0xFF)) buffer[scounter] = '.';
                         } else {
@@ -1619,13 +1625,13 @@ void menuDraw() {
         pspDebugScreenPuts("[Cheats List] ");
         pspDebugScreenSetTextColor(tabSelected == 1 ? 0xFFFFFFFF : 0xFF808080);
         pspDebugScreenPuts("[Searcher] ");
-        pspDebugScreenSetTextColor(tabSelected == 2 ? 0xFFFFFFFF : 0xFF808080); //was 3
+        pspDebugScreenSetTextColor(tabSelected == 2 ? 0xFFFFFFFF : 0xFF808080);//was 3
         pspDebugScreenPuts("[Mem View] ");
-        pspDebugScreenSetTextColor(tabSelected == 3 ? 0xFFFFFFFF : 0xFF808080); //was 4
+        pspDebugScreenSetTextColor(tabSelected == 3 ? 0xFFFFFFFF : 0xFF808080);//was 4
         pspDebugScreenPuts("[Decoder] ");
-        pspDebugScreenSetTextColor(tabSelected == 4 ? 0xFFFFFFFF : 0xFF808080); //was 5
+        pspDebugScreenSetTextColor(tabSelected == 4 ? 0xFFFFFFFF : 0xFF808080);//was 5
         pspDebugScreenPuts("[Tools] ");
-        pspDebugScreenSetTextColor(tabSelected == 5 ? 0xFFFFFFFF : 0xFF808080); //was 2
+        pspDebugScreenSetTextColor(tabSelected == 5 ? 0xFFFFFFFF : 0xFF808080);//was 2
         pspDebugScreenPuts("[Settings] ");
         pspDebugScreenSetTextColor(0xFF808080);
         pspDebugScreenPuts("\n--------------------------------------------------------------------");
@@ -1636,20 +1642,20 @@ void menuDraw() {
                 counter = 0;
                 while (counter < cheatTotal) {
                     //Scroll feature right here, in two lines =3
-                    if ((signed int) counter < (signed int) ((cheatSelected - 11) -
-                                                             ((((signed int) cheatSelected + 11) -
-                                                               ((signed int) cheatTotal)) > 0
-                                                                      ? abs(
-                                                                                ((signed int) cheatSelected + 11) -
-                                                                                ((signed int) cheatTotal))
-                                                                      : 0))) {
+                    if ((int) counter < (int) ((cheatSelected - 11) -
+                                               ((((int) cheatSelected + 11) -
+                                                 ((int) cheatTotal)) > 0
+                                                        ? abs(
+                                                                  ((int) cheatSelected + 11) -
+                                                                  ((int) cheatTotal))
+                                                        : 0))) {
                         counter++;
                         continue;
                     }
-                    if ((signed int) counter > (signed int) ((cheatSelected + 11) +
-                                                             (((signed int) cheatSelected - 11) < 0 ? abs(
-                                                                                                              (signed int) (cheatSelected - 11))
-                                                                                                    : 0))) {
+                    if ((int) counter > (int) ((cheatSelected + 11) +
+                                               (((int) cheatSelected - 11) < 0 ? abs(
+                                                                                         (signed int) (cheatSelected - 11))
+                                                                               : 0))) {
                         counter++;
                         continue;
                     }
@@ -1693,7 +1699,7 @@ void menuDraw() {
                 counter = 0;
                 while (counter < (3 + ((!cheatSearch) * 2))) {
                     //Scroll feature right here, in two lines =3
-                    if ((int) counter < (int) ((cheatSelected - 12) - ((((int) cheatSelected + 12) - ((int) cheatTotal)) > 0 ? abs(((int) cheatSelected + 12) - ((int) cheatTotal)): 0))) {
+                    if ((int) counter < (int) ((cheatSelected - 12) - ((((int) cheatSelected + 12) - ((int) cheatTotal)) > 0 ? abs(((int) cheatSelected + 12) - ((int) cheatTotal)) : 0))) {
                         counter++;
                         continue;
                     }
@@ -2013,7 +2019,7 @@ void menuDraw() {
 
             case 5://DRAW SETTINGS
                 counter = 0;
-                while (counter < 11) {
+                while (counter < 12) {
                     if (cheatSelected == counter) {
                         //Highlight the selection
                         pspDebugScreenSetTextColor(0xFF0000FF);
@@ -2078,7 +2084,16 @@ void menuDraw() {
                             break;
 
                         case 10:
-                            pspDebugScreenPuts("  Enable USB\n");
+                            pspDebugScreenPuts("  Enable USB?  ");
+                            if (sceUsbGetState() & PSP_USB_ACTIVATED) {
+                                pspDebugScreenPuts("True\n");
+                            } else {
+                                pspDebugScreenPuts("False\n");
+                            }
+                            break;
+
+                        case 11:
+                            pspDebugScreenPuts("  Restart Game\n");
                             break;
                     }
                     counter++;
@@ -2123,6 +2138,10 @@ void menuDraw() {
                         break;
                     case 10:
                         pspDebugScreenPuts("Enable USB");
+                        break;
+
+                    case 11:
+                        pspDebugScreenPuts("Restart the Game");
                         break;
                 }
                 lineClear(33);
@@ -2253,6 +2272,58 @@ void menuDraw() {
   }*/
 }
 
+int LoadStartModule(char *path) {
+    u32 loadResult;
+    u32 startResult;
+    int status;
+
+    loadResult = sceKernelLoadModule(path, 0, NULL);
+    if (loadResult & 0x80000000)
+        return -1;
+    else
+        startResult =
+                sceKernelStartModule(loadResult, 0, NULL, &status, NULL);
+
+    if (loadResult != startResult)
+        return -2;
+
+    return 0;
+}
+
+void start_usb() {
+    LoadStartModule("flash0:/kd/semawm.prx");
+    LoadStartModule("flash0:/kd/usbstor.prx");
+    LoadStartModule("flash0:/kd/usbstormgr.prx");
+    LoadStartModule("flash0:/kd/usbstorms.prx");
+    LoadStartModule("flash0:/kd/usbstorboot.prx");
+    sceUsbStart(PSP_USBBUS_DRIVERNAME, 0, 0);
+    sceUsbStart(PSP_USBSTOR_DRIVERNAME, 0, 0);
+    sceUsbstorBootSetCapacity(0x800000);
+    sceUsbActivate(0x1c8);
+}
+
+void stop_usb() {
+    sceUsbDeactivate(0x1c8);
+    sceUsbStop(PSP_USBSTOR_DRIVERNAME, 0, 0);
+    sceUsbStop(PSP_USBBUS_DRIVERNAME, 0, 0);
+    sceIoDevctl("fatms0:", 0x0240D81E, NULL, 0, NULL, 0);
+}
+
+
+void restartGame(void)
+{
+    struct SceKernelLoadExecParam execParam;
+
+    char* currentGamePath = getGamePathFromID(gameId);
+
+    execParam.size = sizeof(execParam);
+    execParam.argp = currentGamePath;
+    execParam.args = strlen(currentGamePath);
+    execParam.key = NULL;
+
+    sceKernelLoadExec(currentGamePath, &execParam);
+}
+
 void menuInput() {
     int fd;
     int fd2;
@@ -2262,6 +2333,7 @@ void menuInput() {
     unsigned int padButtons;
     unsigned char miscType = 0;
     pad.Buttons = 0;
+    u32 retVal;
     menuDraw();
 
     //Loop for input
@@ -2339,8 +2411,8 @@ void menuInput() {
                     } else {
                         if (tabSelected == 3) {
                             browseAddress = copyData | 0x40000000;//(browseY * browseLines)+
-                            if (browseAddress > (0x4A000000 - (22 * browseLines))) {
-                                browseAddress = (0x4A000000 - (22 * browseLines));
+                            if (browseAddress > (END_ADDRESS - (22 * browseLines))) {
+                                browseAddress = (END_ADDRESS - (22 * browseLines));
                             }
                         } else if (tabSelected == 4) {
                             decodeAddress = copyData | 0x40000000;//+(decodeY*4);
@@ -2689,18 +2761,18 @@ void menuInput() {
                                     }
 
                                     //Search!
-                                    counter = 0x48804000;
+                                    counter = START_ADDRESS;
 
                                     //Helper
-                                    while (counter < 0x4A000000) {
+                                    while (counter < END_ADDRESS) {
                                         //Helper
-                                        if (!((counter - 0x48804000) & 0xFFFF)) {
+                                        if (!((counter - START_ADDRESS) & 0xFFFF)) {
                                             if (!cheatPause) sceKernelDelayThread(1500);
 
                                             lineClear(33);
                                             pspDebugScreenSetTextColor(0xFFFF8000);
                                             sprintf(buffer, "Searching = %02d%%; Hold () to Abort",
-                                                    (counter - 0x48804000) / ((0x4A000000 - 0x48804000) / 100));
+                                                    (counter - START_ADDRESS) / ((END_ADDRESS - START_ADDRESS) / 100));
                                             pspDebugScreenPuts(buffer);
 
                                             sceCtrlPeekBufferPositive(&pad, 1);
@@ -2826,7 +2898,7 @@ void menuInput() {
                                             lineClear(33);
                                             pspDebugScreenSetTextColor(0xFFFF8000);
                                             sprintf(buffer, "Searching = %02d%%; Hold () to Abort",
-                                                    (scounter - 0x48804000) / ((0x4A000000 - 0x48804000) / 100));
+                                                    (scounter - START_ADDRESS) / ((END_ADDRESS - START_ADDRESS) / 100));
                                             pspDebugScreenPuts(buffer);
 
                                             sceCtrlPeekBufferPositive(&pad, 1);
@@ -3193,22 +3265,22 @@ void menuInput() {
                                     }
 
                                     //Get ready
-                                    counter = 0x48804000;
+                                    counter = START_ADDRESS;
 
                                     //Go!
-                                    while (counter < 0x4A000000) {
+                                    while (counter < END_ADDRESS) {
                                         //Load it
                                         //sceIoRead(fd, &scounter, miscType);
                                         fileBufferRead(&scounter, miscType);
 
                                         //Helper
-                                        if (!((counter - 0x48804000) & 0xFFFF)) {
+                                        if (!((counter - START_ADDRESS) & 0xFFFF)) {
                                             if (!cheatPause) sceKernelDelayThread(1500);
 
                                             lineClear(33);
                                             pspDebugScreenSetTextColor(0xFFFF8000);
                                             sprintf(buffer, "Searching = %02d%%; Hold () to Abort",
-                                                    (counter - 0x48804000) / ((0x4A000000 - 0x48804000) / 100));
+                                                    (counter - START_ADDRESS) / ((END_ADDRESS - START_ADDRESS) / 100));
                                             pspDebugScreenPuts(buffer);
 
                                             sceCtrlPeekBufferPositive(&pad, 1);
@@ -3402,7 +3474,7 @@ void menuInput() {
                                             lineClear(33);
                                             pspDebugScreenSetTextColor(0xFFFF8000);
                                             sprintf(buffer, "Searching = %02d%%; Hold () to Abort",
-                                                    (scounter - 0x48804000) / ((0x4A000000 - 0x48804000) / 100));
+                                                    (scounter - START_ADDRESS) / ((END_ADDRESS - START_ADDRESS) / 100));
                                             pspDebugScreenPuts(buffer);
 
                                             sceCtrlPeekBufferPositive(&pad, 1);
@@ -3823,18 +3895,18 @@ void menuInput() {
                             searchResultCounter = 0;
 
                             //Search!
-                            counter = 0x48804000;
+                            counter = START_ADDRESS;
 
                             //Helper
-                            while (counter < 0x4A000000) {
+                            while (counter < END_ADDRESS) {
                                 //Helper
-                                if (!((counter - 0x48804000) & 0xFFFF)) {
+                                if (!((counter - START_ADDRESS) & 0xFFFF)) {
                                     if (!cheatPause) sceKernelDelayThread(1500);
 
                                     lineClear(33);
                                     pspDebugScreenSetTextColor(0xFFFF8000);
                                     sprintf(buffer, "Searching = %02d%%; Hold () to Abort",
-                                            (counter - 0x48804000) / ((0x4A000000 - 0x48804000) / 100));
+                                            (counter - START_ADDRESS) / ((END_ADDRESS - START_ADDRESS) / 100));
                                     pspDebugScreenPuts(buffer);
 
                                     sceCtrlPeekBufferPositive(&pad, 1);
@@ -4001,8 +4073,8 @@ void menuInput() {
                     } else if (extSelected[0] >= 2) {
                         if (pad.Buttons & PSP_CTRL_LEFT) {
                             searchAddress[extSelected[0] - 2]--;
-                            if (searchAddress[extSelected[0] - 2] < 0x48804000) {
-                                searchAddress[extSelected[0] - 2] = 0x48804000;
+                            if (searchAddress[extSelected[0] - 2] < START_ADDRESS) {
+                                searchAddress[extSelected[0] - 2] = START_ADDRESS;
                             }
 
                             menuDraw();
@@ -4010,7 +4082,7 @@ void menuInput() {
                             sceKernelDelayThread(150000 - (10000 * cheatButtonAgeX));
                         } else if (pad.Buttons & PSP_CTRL_RIGHT) {
                             searchAddress[extSelected[0] - 2]++;
-                            if (searchAddress[extSelected[0] - 2] >= 0x4A000000) {
+                            if (searchAddress[extSelected[0] - 2] >= END_ADDRESS) {
                                 searchAddress[extSelected[0] - 2] = 0x49FFFFFF;
                             }
 
@@ -4376,11 +4448,11 @@ void menuInput() {
                             switch (browseC) {
                                 case 0:
                                     browseAddress += (1 << (4 * (7 - browseX)));
-                                    if (browseAddress < 0x48804000) {
-                                        browseAddress = 0x48804000;
+                                    if (browseAddress < START_ADDRESS) {
+                                        browseAddress = START_ADDRESS;
                                     }
-                                    if (browseAddress > (0x4A000000 - (22 * browseLines))) {
-                                        browseAddress = (0x4A000000 - (22 * browseLines));
+                                    if (browseAddress > (END_ADDRESS - (22 * browseLines))) {
+                                        browseAddress = (END_ADDRESS - (22 * browseLines));
                                     }
                                     break;
                                 case 1:
@@ -4417,11 +4489,11 @@ void menuInput() {
                             switch (browseC) {
                                 case 0:
                                     browseAddress -= (1 << (4 * (7 - browseX)));
-                                    if (browseAddress < 0x48804000) {
-                                        browseAddress = 0x48804000;
+                                    if (browseAddress < START_ADDRESS) {
+                                        browseAddress = START_ADDRESS;
                                     }
-                                    if (browseAddress > (0x4A000000 - (22 * browseLines))) {
-                                        browseAddress = (0x4A000000 - (22 * browseLines));
+                                    if (browseAddress > (END_ADDRESS - (22 * browseLines))) {
+                                        browseAddress = (END_ADDRESS - (22 * browseLines));
                                     }
                                     break;
                                 case 1:
@@ -4460,22 +4532,22 @@ void menuInput() {
                     } else if (pad.Buttons & PSP_CTRL_SQUARE) {
                         if (pad.Buttons & PSP_CTRL_UP) {
                             browseAddress -= browseLines;
-                            if (browseAddress < 0x48804000) {
-                                browseAddress = 0x48804000;
+                            if (browseAddress < START_ADDRESS) {
+                                browseAddress = START_ADDRESS;
                             }
-                            if (browseAddress > (0x4A000000 - (22 * browseLines))) {
-                                browseAddress = (0x4A000000 - (22 * browseLines));
+                            if (browseAddress > (END_ADDRESS - (22 * browseLines))) {
+                                browseAddress = (END_ADDRESS - (22 * browseLines));
                             }
                             menuDraw();
                             if (cheatButtonAgeY < 12) cheatButtonAgeY++;
                             sceKernelDelayThread(150000 - (10000 * cheatButtonAgeY));
                         } else if (pad.Buttons & PSP_CTRL_DOWN) {
                             browseAddress += browseLines;
-                            if (browseAddress < 0x48804000) {
-                                browseAddress = 0x48804000;
+                            if (browseAddress < START_ADDRESS) {
+                                browseAddress = START_ADDRESS;
                             }
-                            if (browseAddress > (0x4A000000 - (22 * browseLines))) {
-                                browseAddress = (0x4A000000 - (22 * browseLines));
+                            if (browseAddress > (END_ADDRESS - (22 * browseLines))) {
+                                browseAddress = (END_ADDRESS - (22 * browseLines));
                             }
                             menuDraw();
                             if (cheatButtonAgeY < 12) cheatButtonAgeY++;
@@ -4485,11 +4557,11 @@ void menuInput() {
                         }
                         if ((abs((signed) (pad.Ly - 127)) - 40) > 0) {
                             browseAddress += (((signed) (pad.Ly - 127)) / browseLines) * 64;
-                            if (browseAddress < 0x48804000) {
-                                browseAddress = 0x48804000;
+                            if (browseAddress < START_ADDRESS) {
+                                browseAddress = START_ADDRESS;
                             }
-                            if (browseAddress > (0x4A000000 - (22 * browseLines))) {
-                                browseAddress = (0x4A000000 - (22 * browseLines));
+                            if (browseAddress > (END_ADDRESS - (22 * browseLines))) {
+                                browseAddress = (END_ADDRESS - (22 * browseLines));
                             }
                             menuDraw();
                             sceKernelDelayThread(18750);
@@ -4500,11 +4572,11 @@ void menuInput() {
                                 browseY--;
                             } else if (browseY == 0) {
                                 browseAddress -= browseLines;
-                                if (browseAddress < 0x48804000) {
-                                    browseAddress = 0x48804000;
+                                if (browseAddress < START_ADDRESS) {
+                                    browseAddress = START_ADDRESS;
                                 }
-                                if (browseAddress > (0x4A000000 - (22 * browseLines))) {
-                                    browseAddress = (0x4A000000 - (22 * browseLines));
+                                if (browseAddress > (END_ADDRESS - (22 * browseLines))) {
+                                    browseAddress = (END_ADDRESS - (22 * browseLines));
                                 }
                             }
                             menuDraw();
@@ -4515,11 +4587,11 @@ void menuInput() {
                                 browseY++;
                             } else if (browseY == 21) {
                                 browseAddress += browseLines;
-                                if (browseAddress < 0x48804000) {
-                                    browseAddress = 0x48804000;
+                                if (browseAddress < START_ADDRESS) {
+                                    browseAddress = START_ADDRESS;
                                 }
-                                if (browseAddress > (0x4A000000 - (22 * browseLines))) {
-                                    browseAddress = (0x4A000000 - (22 * browseLines));
+                                if (browseAddress > (END_ADDRESS - (22 * browseLines))) {
+                                    browseAddress = (END_ADDRESS - (22 * browseLines));
                                 }
                             }
                             menuDraw();
@@ -4588,8 +4660,8 @@ void menuInput() {
                                     } else {
                                         decodeAddress += (1 << (4 * (7 - decodeX)));
                                     }
-                                    if (decodeAddress < 0x48804000) {
-                                        decodeAddress = 0x48804000;
+                                    if (decodeAddress < START_ADDRESS) {
+                                        decodeAddress = START_ADDRESS;
                                     }
                                     if (decodeAddress > 0x49FFFFA8) {
                                         decodeAddress = 0x49FFFFA8;
@@ -4614,8 +4686,8 @@ void menuInput() {
                                     } else {
                                         decodeAddress -= (1 << (4 * (7 - decodeX)));
                                     }
-                                    if (decodeAddress < 0x48804000) {
-                                        decodeAddress = 0x48804000;
+                                    if (decodeAddress < START_ADDRESS) {
+                                        decodeAddress = START_ADDRESS;
                                     }
                                     if (decodeAddress > 0x49FFFFA8) {
                                         decodeAddress = 0x49FFFFA8;
@@ -4637,7 +4709,7 @@ void menuInput() {
                         }
                     } else if (pad.Buttons & PSP_CTRL_SQUARE) {
                         if (pad.Buttons & PSP_CTRL_UP) {
-                            if (decodeAddress > 0x48804000) {
+                            if (decodeAddress > START_ADDRESS) {
                                 decodeAddress -= 4;
                             }
                             menuDraw();
@@ -4655,8 +4727,8 @@ void menuInput() {
                         }
                         if ((abs((signed) (pad.Ly - 127)) - 40) > 0) {
                             decodeAddress += (((signed) (pad.Ly - 127)) / browseLines) * browseLines;
-                            if (decodeAddress < 0x48804000) {
-                                decodeAddress = 0x48804000;
+                            if (decodeAddress < START_ADDRESS) {
+                                decodeAddress = START_ADDRESS;
                             }
                             if (decodeAddress > 0x49FFFFA8) {
                                 decodeAddress = 0x49FFFFA8;
@@ -4669,7 +4741,7 @@ void menuInput() {
                             if (decodeY > 0) {
                                 decodeY--;
                             } else if (decodeY == 0) {
-                                if (decodeAddress > 0x48804000) {
+                                if (decodeAddress > START_ADDRESS) {
                                     decodeAddress -= 4;
                                 }
                             }
@@ -4694,142 +4766,6 @@ void menuInput() {
                     break;
 
                 case 4://INPUT TOOLS
-                    /*
-                    if ((pad.Buttons & PSP_CTRL_SELECT) && (!trackStatus)) {
-                        copyMenu = 1;
-                        menuDraw();
-                        sceKernelDelayThread(150000);
-                    }
-                    if (pad.Buttons & PSP_CTRL_CROSS) {
-                        if ((trackY == 0) && (!trackStatus)) {
-                            extSelected[3] = !extSelected[3];
-                        } else if (trackY == 1) {
-                            trackStatus = !trackStatus;
-
-                            if (trackStatus) {
-                                if (trackMode == 0) {
-                                    //Apply breakpoint
-                                    //trackBackup=*((unsigned int*)(trackAddress));
-                                    //*((unsigned int*)(trackAddress))=0x0000000D;
-
-                                    sceKernelDcacheWritebackInvalidateAll();
-                                    sceKernelIcacheInvalidateAll();
-                                }
-                            } else {
-                                if (trackMode == 0) {
-                                    //Remove breakpoint
-                                    //*((unsigned int*)(trackAddress))=trackBackup;
-
-                                    sceKernelDcacheWritebackInvalidateAll();
-                                    sceKernelIcacheInvalidateAll();
-                                }
-                            }
-                        } else if (trackY == 2) {
-                            trackPause = !trackPause;
-                        }
-                        menuDraw();
-                        sceKernelDelayThread(150000);
-                    }
-
-                    if (trackY == 0) {
-                        if (pad.Buttons & PSP_CTRL_LEFT) {
-                            trackX--;
-                            switch (trackC) {
-                                case 0:
-                                    if ((signed) trackX == -1) { trackX = 0; }
-                                    break;
-                                case 1:
-                                    if ((signed) trackX == -1) {
-                                        trackX = 0;
-                                        trackC--;
-                                    }
-                                    break;
-                            }
-                            menuDraw();
-                            if (cheatButtonAgeX < 12) cheatButtonAgeX++;
-                            sceKernelDelayThread(150000 - (10000 * cheatButtonAgeX));
-                        } else if (pad.Buttons & PSP_CTRL_RIGHT) {
-                            trackX++;
-                            switch (trackC) {
-                                case 0:
-                                    if (trackX > 0) {
-                                        trackX = 0;
-                                        trackC++;
-                                    }
-                                    break;
-                                case 1:
-                                    if (trackX > 7) { trackX = 7; }
-                                    break;
-                            }
-                            menuDraw();
-                            if (cheatButtonAgeX < 12) cheatButtonAgeX++;
-                            sceKernelDelayThread(150000 - (10000 * cheatButtonAgeX));
-                        } else {
-                            cheatButtonAgeX = 0;
-                        }
-                    }
-
-                    if (extSelected[3]) {
-                        if (pad.Buttons & PSP_CTRL_UP) {
-                            if (trackC == 0) {
-                                if (trackMode < 1) trackMode++;
-                            } else {
-                                if (trackX != 7) {
-                                    trackAddress += (1 << (4 * (7 - trackX)));
-                                } else {
-                                    trackAddress += 4;
-                                }
-                                if (trackAddress < 0x48804000) {
-                                    trackAddress = 0x48804000;
-                                }
-                                if (trackAddress > 0x49FFFFFC) {
-                                    trackAddress = 0x49FFFFFC;
-                                }
-                            }
-                            menuDraw();
-                            if (cheatButtonAgeY < 12) cheatButtonAgeY++;
-                            sceKernelDelayThread(150000 - (10000 * cheatButtonAgeY));
-                        } else if (pad.Buttons & PSP_CTRL_DOWN) {
-                            if (trackC == 0) {
-                                if (trackMode > 0) trackMode--;
-                            } else {
-                                if (trackX != 7) {
-                                    trackAddress -= (1 << (4 * (7 - trackX)));
-                                } else {
-                                    trackAddress -= 4;
-                                }
-                                if (trackAddress < 0x48804000) {
-                                    trackAddress = 0x48804000;
-                                }
-                                if (trackAddress > 0x49FFFFFC) {
-                                    trackAddress = 0x49FFFFFC;
-                                }
-                            }
-                            menuDraw();
-                            if (cheatButtonAgeY < 12) cheatButtonAgeY++;
-                            sceKernelDelayThread(150000 - (10000 * cheatButtonAgeY));
-                        } else {
-                            cheatButtonAgeY = 0;
-                        }
-                    } else {
-                        if (pad.Buttons & PSP_CTRL_UP) {
-                            if (trackY > trackStatus) {
-                                trackY--;
-                            }
-                            menuDraw();
-                            if (cheatButtonAgeY < 12) cheatButtonAgeY++;
-                            sceKernelDelayThread(150000 - (10000 * cheatButtonAgeY));
-                        } else if (pad.Buttons & PSP_CTRL_DOWN) {
-                            if (trackY < 2) {
-                                trackY++;
-                            }
-                            menuDraw();
-                            if (cheatButtonAgeY < 12) cheatButtonAgeY++;
-                            sceKernelDelayThread(150000 - (10000 * cheatButtonAgeY));
-                        } else {
-                            cheatButtonAgeY = 0;
-                        }
-                    }*/
                     continue;
 
                 case 5://INPUT SETTINGS
@@ -4837,15 +4773,15 @@ void menuInput() {
                         if (cheatSelected > 0) {
                             cheatSelected--;
                         } else if (cheatSelected == 0) {
-                            cheatSelected = 10;
+                            cheatSelected = 11;
                         }
                         menuDraw();
-                        if (cheatButtonAgeY < 12) cheatButtonAgeY++;
+                        if (cheatButtonAgeY < 13) cheatButtonAgeY++;
                         sceKernelDelayThread(150000 - (10000 * cheatButtonAgeY));
                     } else if (pad.Buttons & PSP_CTRL_DOWN) {
-                        if (cheatSelected < 10) {
+                        if (cheatSelected < 11) {
                             cheatSelected++;
-                        } else if (cheatSelected == 10) {
+                        } else if (cheatSelected == 11) {
                             cheatSelected = 0;
                         }
                         menuDraw();
@@ -4986,26 +4922,18 @@ void menuInput() {
                             browseC = 0;
                             browseX = 0;
                             browseY = 0;
-                            if (browseAddress < 0x48804000) {
-                                browseAddress = 0x48804000;
+                            if (browseAddress < START_ADDRESS) {
+                                browseAddress = START_ADDRESS;
                             }
-                            if (browseAddress > (0x4A000000 - (22 * browseLines))) {
-                                browseAddress = (0x4A000000 - (22 * browseLines));
+                            if (browseAddress > (END_ADDRESS - (22 * browseLines))) {
+                                browseAddress = (END_ADDRESS - (22 * browseLines));
                             }
                             menuDraw();
                         } else if (cheatSelected == 5) {
-                            if (browseFormat == 0x48800000) {
-                                browseFormat = 0x40000000;
-                            } else {
-                                browseFormat = 0x48800000;
-                            }
+                            browseFormat = (browseFormat == 0x48800000) ? 0x40000000 : 0x48800000;
                             menuDraw();
                         } else if (cheatSelected == 6) {
-                            if (decodeFormat == 0x48800000) {
-                                decodeFormat = 0x40000000;
-                            } else {
-                                decodeFormat = 0x48800000;
-                            }
+                            decodeFormat = (decodeFormat == 0x48800000) ? 0x40000000 : 0x48800000;
                             menuDraw();
                         } else if (cheatSelected == 7) {
                             if (trackFormat == 0x48800000) {
@@ -5018,22 +4946,13 @@ void menuInput() {
                             cheatSave();
                             menuDraw();
                             sceKernelDelayThread(150000);//Delay twice
-                        }
-                        else if (cheatSelected == 10) {
-                            int usbState = sceUsbGetState();
-                            if (usbState & PSP_USB_ACTIVATED) {
-                                sceUsbDeactivate(0x02d2);
-                                sceUsbStop(PSP_USBBUS_DRIVERNAME, 0, 0);
-                                sceUsbStop(PSP_USBBUS_DRIVERNAME,0,0);
-                            } else {
-                                sceUsbStart(PSP_USBBUS_DRIVERNAME, 0, 0);
-                                sceUsbStart(PSP_USBSTOR_DRIVERNAME, 0, 0);
-                                sceUsbActivate(0x02d2);
-                            }
+                        } else if (cheatSelected == 10) {
+                            sceUsbGetState() & PSP_USB_ACTIVATED ? stop_usb() : start_usb();
                             menuDraw();
-                            sceKernelDelayThread(150000);
+                        } else if (cheatSelected == 11) {
+                            restartGame;
+                            menuDraw();
                         }
-
                         sceKernelDelayThread(150000);
                     }
                     break;
