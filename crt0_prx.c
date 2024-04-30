@@ -28,7 +28,7 @@
 extern SceUID sceKernelSearchModuleByName(unsigned char *);
 
 //Defines
-PSP_MODULE_INFO("cheatER", 0x3007, 1, 2);//0x3007
+PSP_MODULE_INFO("cheatER", 0x3007, 1, 0);//0x3007
 PSP_MAIN_THREAD_ATTR(0);                 //0 for kernel mode too
 
 //Globals
@@ -151,7 +151,8 @@ unsigned int screenNo = 0;
 
 unsigned char screenPath[64] = {0};
 
-char* getGamePathFromID(char* gameID);
+//char* getGamePathFromID(char* gameID);
+
 
 
 #define fileBufferPeek(a_out, a_ahead)                  \
@@ -859,6 +860,31 @@ static void gameResume(SceUID thid) {
             sceKernelResumeThread(tmp_thid);
     }
 }
+void restartPlugin(const char *pluginPath) {
+    SceUID modid;
+    const char* pluginName = "cheatER";
+    modid = (SceUID) sceKernelFindModuleByName(pluginName);
+
+    int stopResult = sceKernelStopModule(modid, 0, NULL, NULL, NULL);
+    if (stopResult < 0) {
+        sprintf(buffer, "sceKernelStopModule failed: 0x%08X\n", stopResult);
+    }
+
+    int unloadResult = sceKernelUnloadModule(modid);
+    if (unloadResult < 0) {
+        sprintf(buffer, "sceKernelUnloadModule failed: 0x%08X\n", unloadResult);
+    }
+
+    modid = sceKernelLoadModule(pluginPath, 0, NULL);
+    if (modid < 0) {
+        sprintf(buffer, "sceKernelLoadModule failed: 0x%08X\n", modid);
+    }
+
+    int startResult = sceKernelStartModule(modid, 0, NULL, NULL, NULL);
+    if (startResult < 0) {
+        sprintf(buffer, "sceKernelStartModule failed: 0x%08X\n", startResult);
+    }
+}
 
 #include "headers/mips.h"
 
@@ -873,10 +899,15 @@ void menuDraw() {
     unsigned int convTotal;
 
     //Draw the menu
+    pspDebugScreenSetXY(55, 0);
+    pspDebugScreenSetTextColor(0xFFFFFFFF);
+    sprintf(buffer, "Battery: %02d%%", scePowerGetBatteryLifePercent());
+    pspDebugScreenPuts(buffer);
 
     pspDebugScreenSetXY(0, 0);
     pspDebugScreenSetTextColor(0xFFFFFFFF);
     pspDebugScreenPuts("Eps cheatER\nThe NitePR Revamp\n\n");
+
     pspDebugScreenSetTextColor(0xFF00FFFF);
     pspDebugScreenSetTextColor(cheatStatus ? 0xFF00FF00 : 0xFF0000FF);
     pspDebugScreenPuts(
@@ -2092,7 +2123,7 @@ void menuDraw() {
                             break;
 
                         case 11:
-                            pspDebugScreenPuts("  Restart Game\n");
+                            pspDebugScreenPuts("  Restart Plugin\n");
                             break;
                     }
                     counter++;
@@ -2140,7 +2171,7 @@ void menuDraw() {
                         break;
 
                     case 11:
-                        pspDebugScreenPuts("Restart the Game");
+                        pspDebugScreenPuts("Restart the Plugin");
                         break;
                 }
                 lineClear(33);
@@ -2309,19 +2340,21 @@ void stop_usb() {
 }
 
 
-void restartGame(void)
-{
-    struct SceKernelLoadExecParam execParam;
+//void restartGame(void)
+//{
+//    struct SceKernelLoadExecParam execParam;
+//
+//    char* currentGamePath = getGamePathFromID(gameId);
+//
+//    execParam.size = sizeof(execParam);
+//    execParam.argp = currentGamePath;
+//    execParam.args = strlen(currentGamePath);
+//    execParam.key = NULL;
+//
+//    sceKernelLoadExec(currentGamePath, &execParam);
+//}
 
-    char* currentGamePath = getGamePathFromID(gameId);
-
-    execParam.size = sizeof(execParam);
-    execParam.argp = currentGamePath;
-    execParam.args = strlen(currentGamePath);
-    execParam.key = NULL;
-
-    sceKernelLoadExec(currentGamePath, &execParam);
-}
+void restartPlugin(const char* pluginPath);
 
 void menuInput() {
     int fd;
@@ -4949,7 +4982,7 @@ void menuInput() {
                             sceUsbGetState() & PSP_USB_ACTIVATED ? stop_usb() : start_usb();
                             menuDraw();
                         } else if (cheatSelected == 11) {
-                            restartGame;
+                            restartPlugin("ms0:/cheatER.prx");
                             menuDraw();
                         }
                         sceKernelDelayThread(150000);
