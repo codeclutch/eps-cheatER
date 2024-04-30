@@ -81,7 +81,6 @@ typedef struct Cheat {
 
 #define START_ADDRESS 0x48804000
 #define END_ADDRESS 0x4A000000
-#define SKIP_BYTES 0x4000
 
 //Globals
 SceCtrlData pad;
@@ -123,11 +122,11 @@ unsigned int browseLines = 16;
 unsigned int decodeFormat = 0x48800000;
 unsigned int trackFormat = 0x48800000;
 unsigned int browseFormat = 0x48800000;
-unsigned int decodeAddress = START_ADDRESS;
+unsigned int decodeAddress = 0x48804000;
 unsigned int decodeY = 0;
 unsigned int decodeC = 0;
 unsigned int decodeX = 0;
-unsigned int trackAddress = START_ADDRESS;
+unsigned int trackAddress = 0x48804000;
 unsigned int trackY = 0;
 unsigned int trackX = 0;
 unsigned int trackC = 0;
