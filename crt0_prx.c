@@ -914,7 +914,7 @@ void menuDraw() {
 
     pspDebugScreenSetXY(0, 0);
     pspDebugScreenSetTextColor(0xFFFFFFFF);
-    pspDebugScreenPuts("Eps cheatER");
+    pspDebugScreenPuts("cheatER");
     pspDebugScreenSetXY(0, 1);
     pspDebugScreenSetTextColor(0xFFFFFFFF);
     pspDebugScreenPuts("The NitePR Revamp\n\n");
