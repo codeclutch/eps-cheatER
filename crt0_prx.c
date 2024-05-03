@@ -899,14 +899,25 @@ void menuDraw() {
     unsigned int convTotal;
 
     //Draw the menu
-    pspDebugScreenSetXY(55, 0);
+    pspDebugScreenSetXY(50, 0);
     pspDebugScreenSetTextColor(0xFFFFFFFF);
-    sprintf(buffer, "Battery: %02d%%", scePowerGetBatteryLifePercent());
+    sprintf(buffer, "Game ID: %s", gameId);
+    pspDebugScreenPuts(buffer);
+
+    pspDebugScreenSetXY(50, 1);
+    pspDebugScreenSetTextColor(0xFFFFFFFF);
+    sprintf(buffer, "Battery: ");
+    pspDebugScreenPuts(buffer);
+    pspDebugScreenSetTextColor(0x0000FF00);
+    sprintf(buffer, "%02d%%", scePowerGetBatteryLifePercent());
     pspDebugScreenPuts(buffer);
 
     pspDebugScreenSetXY(0, 0);
     pspDebugScreenSetTextColor(0xFFFFFFFF);
-    pspDebugScreenPuts("Eps cheatER\nThe NitePR Revamp\n\n");
+    pspDebugScreenPuts("cheatER");
+    pspDebugScreenSetXY(0, 1);
+    pspDebugScreenSetTextColor(0xFFFFFFFF);
+    pspDebugScreenPuts("The NitePR Revamp\n\n");
 
     pspDebugScreenSetTextColor(0xFF00FFFF);
     pspDebugScreenSetTextColor(cheatStatus ? 0xFF00FF00 : 0xFF0000FF);
@@ -3493,6 +3504,7 @@ void menuInput() {
                                     }
 
                                     //Loop through the list checking each one
+                                    //TODO------Improve search functionality
                                     counter = searchResultCounter;
                                     searchResultCounter = 0;
                                     while (counter > 0) {
